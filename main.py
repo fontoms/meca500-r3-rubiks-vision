@@ -6,6 +6,7 @@ import cv2
 from src.camera import Camera, CameraError, list_cameras
 from src.capture import CaptureError, capture_frame, describe_frame, run_preview
 from src.detection import detect_face, draw_detection
+from src.grid import draw_cells, warp_face
 
 
 def parse_args(argv=None):
@@ -42,6 +43,9 @@ def run_on_image(path):
                                   "bas-gauche"), detection.corners):
             print(f"  {label:12} ({x:.0f}, {y:.0f})")
     cv2.imshow("Detection", draw_detection(frame, detection))
+    if detection is not None:
+        face = warp_face(frame, detection.corners)
+        cv2.imshow("Face redressee", draw_cells(face))
     print("Appuyer sur une touche pour fermer.")
     cv2.waitKey(0)
     cv2.destroyAllWindows()
