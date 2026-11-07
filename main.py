@@ -16,6 +16,11 @@ def parse_args(argv=None):
     parser.add_argument("--image", default=None, metavar="FICHIER",
                         help="détecter la face sur une image enregistrée "
                              "au lieu de la webcam")
+    parser.add_argument("--exposure", type=float, default=None, metavar="VALEUR",
+                        help="désactive l'exposition automatique et fixe cette "
+                             "valeur (souvent négative, ex. -5)")
+    parser.add_argument("--lock-wb", action="store_true",
+                        help="désactive la balance des blancs automatique")
     return parser.parse_args(argv)
 
 
@@ -43,7 +48,7 @@ def run_on_image(path):
     return 0
 
 
-def run_on_camera(requested_index):
+def run_on_camera(requested_index, exposure=None, lock_white_balance=False):
     indexes = list_cameras()
     if not indexes:
         print("Aucune caméra détectée.")
@@ -56,7 +61,8 @@ def run_on_camera(requested_index):
         return 1
 
     try:
-        with Camera(index) as cam:
+        with Camera(index, exposure=exposure,
+                    lock_white_balance=lock_white_balance) as cam:
             info = cam.info()
             print(f"Caméra {info['index']} ouverte ({info['backend']}) : "
                   f"{info['width']}x{info['height']} @ {info['fps']:.0f} fps")
@@ -80,7 +86,7 @@ def main(argv=None):
     args = parse_args(argv)
     if args.image:
         return run_on_image(args.image)
-    return run_on_camera(args.camera)
+    return run_on_camera(args.camera, args.exposure, args.lock_wb)
 
 
 if __name__ == "__main__":

@@ -39,9 +39,7 @@ def detect_face(frame):
 def find_sticker_candidates(frame):
     """Retourne les quadrilatères ressemblant à des stickers."""
     gray = frame if frame.ndim == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 30, 90)
-    edges = cv2.dilate(edges, np.ones((3, 3), np.uint8))
+    edges = cv2.dilate(_edge_map(frame), np.ones((3, 3), np.uint8))
     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     image_area = gray.shape[0] * gray.shape[1]
@@ -50,6 +48,23 @@ def find_sticker_candidates(frame):
     candidates = [quad for quad in map(_as_square_quad, contours)
                   if quad is not None and min_area <= cv2.contourArea(quad) <= max_area]
     return _remove_duplicates(candidates)
+
+
+def _edge_map(frame):
+    """Contours de la luminosité et de la saturation.
+
+    Un sticker bleu (ou rouge) est presque aussi sombre que le plastique noir :
+    le contraste en niveaux de gris est trop faible pour Canny. Sa saturation,
+    elle, est élevée alors que celle du plastique est nulle.
+    """
+    if frame.ndim == 2:
+        return cv2.Canny(cv2.GaussianBlur(frame, (5, 5), 0), 30, 90)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    saturation = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)[:, :, 1]
+    return cv2.bitwise_or(
+        cv2.Canny(cv2.GaussianBlur(gray, (5, 5), 0), 30, 90),
+        cv2.Canny(cv2.GaussianBlur(saturation, (5, 5), 0), 30, 90),
+    )
 
 
 def _as_square_quad(contour):

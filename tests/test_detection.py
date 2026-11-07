@@ -13,7 +13,7 @@ TOLERANCE = 8  # pixels
 
 
 def make_face(width=640, height=480, side=210, background=(140, 130, 120),
-              skip=None):
+              skip=None, colors=STICKER_COLORS):
     """Face de cube centrée et alignée ; retourne (image, coins des stickers)."""
     image = np.full((height, width, 3), background, np.uint8)
     x0, y0 = (width - side) // 2, (height - side) // 2
@@ -21,7 +21,7 @@ def make_face(width=640, height=480, side=210, background=(140, 130, 120),
 
     margin, gap = side * 0.04, side * 0.04
     cell = (side - 2 * margin - 2 * gap) / 3
-    for i, color in enumerate(STICKER_COLORS):
+    for i, color in enumerate(colors):
         if i == skip:
             continue
         row, col = divmod(i, 3)
@@ -62,6 +62,14 @@ def test_frontal_face():
 def test_detects_stickers():
     image, _ = make_face()
     assert len(detect_face(image).stickers) == 9
+
+
+def test_dark_blue_stickers_on_dark_plastic():
+    # bleu sombre : presque le même niveau de gris que le plastique, mais saturé
+    image, corners = make_face(colors=[(120, 30, 0)] * 9)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    assert abs(int(gray[240, 320]) - 20) < 15  # contraste en gris très faible
+    assert_corners(detect_face(image), corners)
 
 
 @pytest.mark.parametrize("angle", [10, 30, -25, 45])

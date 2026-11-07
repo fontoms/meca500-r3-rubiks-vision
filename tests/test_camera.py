@@ -16,12 +16,14 @@ class FakeCapture:
         self._grabs = list(grabs) if isinstance(grabs, list) else None
         self._always = grabs
         self.released = False
+        self.settings = []
         FakeCapture.instances.append(self)
 
     def isOpened(self):
         return self._opened and not self.released
 
     def set(self, prop, value):
+        self.settings.append((prop, value))
         return True
 
     def grab(self):
@@ -161,3 +163,29 @@ def test_real_webcam():
         info = cam.info()
         assert info["width"] > 0 and info["height"] > 0
     assert not cam.is_opened
+
+
+def test_automatic_controls_untouched_by_default(monkeypatch):
+    install_fake(monkeypatch)
+    with Camera():
+        props = [p for p, _ in FakeCapture.instances[0].settings]
+    assert camera_module.cv2.CAP_PROP_EXPOSURE not in props
+    assert camera_module.cv2.CAP_PROP_AUTO_WB not in props
+
+
+def test_manual_exposure_and_locked_white_balance(monkeypatch):
+    install_fake(monkeypatch)
+    with Camera(exposure=-5, lock_white_balance=True):
+        settings = FakeCapture.instances[0].settings
+    cv2 = camera_module.cv2
+    assert (cv2.CAP_PROP_AUTO_EXPOSURE, camera_module.MANUAL_EXPOSURE_MODE) in settings
+    assert (cv2.CAP_PROP_EXPOSURE, -5) in settings
+    assert (cv2.CAP_PROP_AUTO_WB, 0) in settings
+
+
+def test_manual_controls_use_directshow_on_windows(monkeypatch):
+    monkeypatch.setattr(camera_module.sys, "platform", "win32")
+    cv2 = camera_module.cv2
+    assert Camera(exposure=-5).backend == cv2.CAP_DSHOW
+    assert Camera(lock_white_balance=True).backend == cv2.CAP_DSHOW
+    assert Camera().backend == camera_module.DEFAULT_BACKEND

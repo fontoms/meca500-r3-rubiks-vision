@@ -11,6 +11,9 @@ DEFAULT_BACKEND = cv2.CAP_V4L2 if sys.platform.startswith("linux") else cv2.CAP_
 DEFAULT_FOURCC = "MJPG"
 # Le lien usbipd perd parfois les premières images : on réessaie avant d'abandonner.
 DEFAULT_WARMUP_ATTEMPTS = 3
+# Valeur de CAP_PROP_AUTO_EXPOSURE qui désactive l'exposition automatique :
+# 1 sous V4L2, 0.25 sous DirectShow/MSMF.
+MANUAL_EXPOSURE_MODE = 1 if sys.platform.startswith("linux") else 0.25
 
 
 class CameraError(RuntimeError):
@@ -21,13 +24,22 @@ class Camera:
     """Webcam OpenCV utilisable comme gestionnaire de contexte."""
 
     def __init__(self, index=DEFAULT_INDEX, backend=DEFAULT_BACKEND,
-                 fourcc=DEFAULT_FOURCC, warmup_attempts=DEFAULT_WARMUP_ATTEMPTS):
+                 fourcc=DEFAULT_FOURCC, warmup_attempts=DEFAULT_WARMUP_ATTEMPTS,
+                 exposure=None, lock_white_balance=False):
         if not isinstance(index, int) or index < 0:
             raise ValueError(f"Index de caméra invalide : {index!r}")
         self.index = index
+        # Sous Windows, MSMF ignore l'exposition et la balance des blancs :
+        # DirectShow est nécessaire pour les régler.
+        if (backend == cv2.CAP_ANY and sys.platform == "win32"
+                and (exposure is not None or lock_white_balance)):
+            backend = cv2.CAP_DSHOW
         self.backend = backend
         self.fourcc = fourcc
         self.warmup_attempts = max(1, warmup_attempts)
+        # exposure=None laisse l'exposition automatique ; sinon valeur manuelle.
+        self.exposure = exposure
+        self.lock_white_balance = lock_white_balance
         self._capture = None
 
     @property
@@ -53,6 +65,8 @@ class Camera:
             capture.set(cv2.CAP_PROP_FOURCC,
                         cv2.VideoWriter_fourcc(*self.fourcc))
 
+        self._apply_controls(capture)
+
         # grab() force la caméra à produire une image sans la décoder :
         # c'est le seul moyen fiable de vérifier qu'elle est réellement prête.
         if not any(capture.grab() for _ in range(self.warmup_attempts)):
@@ -63,6 +77,14 @@ class Camera:
 
         self._capture = capture
         return self
+
+    def _apply_controls(self, capture):
+        """Fixe l'exposition et la balance des blancs pour des couleurs stables."""
+        if self.exposure is not None:
+            capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_MODE)
+            capture.set(cv2.CAP_PROP_EXPOSURE, self.exposure)
+        if self.lock_white_balance:
+            capture.set(cv2.CAP_PROP_AUTO_WB, 0)
 
     def release(self):
         """Libère la caméra (sans effet si elle n'est pas ouverte)."""
