@@ -185,4 +185,9 @@ La détection devra progressivement être capable de gérer les variations de po
 Travail attendu :
 - Corriger la perspective de la face si nécessaire.
 - Obtenir une vue frontale de la face.
-- Div
+- Diviser la vue corrigée en neuf cases et extraire une couleur par sticker.
+
+## Contributeurs
+
+- [yliesn](https://github.com/yliesn) — projet de vision d'origine.
+- [fontoms](https://github.com/fontoms) — calibration, détection et adaptation pour le Meca500 R3.
