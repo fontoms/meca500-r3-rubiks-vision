@@ -12,11 +12,12 @@ import cv2
 
 from src.camera import CameraError
 from src.capture import WINDOW_NAME, CaptureError, capture_frame
-from src.color_recognition import COLORS, lab_distance, median_bgr
+from src.color_recognition import (COLORS, lab_distance, median_bgr,
+                                   reference_thresholds)
 from src.detection import detect_face, draw_detection
 from src.grid import extract_stickers
 
-DEFAULT_CONFIG_PATH = Path("config/colors.json")
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "colors.json"
 CENTER_INDEX = 4
 MIN_REFERENCE_DISTANCE = 20  # en dessous, deux références risquent d'être confondues
 COLOR_NAMES_FR = {
@@ -98,7 +99,9 @@ def run_calibration(camera, path=DEFAULT_CONFIG_PATH):
 
     for a, b in close_pairs(references):
         print(f"Attention : {COLOR_NAMES_FR[a]} et {COLOR_NAMES_FR[b]} "
-              "sont très proches, la reconnaissance risque de les confondre.")
+              "sont très proches ; les stickers ambigus resteront non reconnus.")
+    for color, threshold in reference_thresholds(references).items():
+        print(f"Seuil {COLOR_NAMES_FR[color]:6} : {threshold:.1f} Lab")
     print(f"Calibration enregistrée : {save_calibration(references, path)}")
     return references
 

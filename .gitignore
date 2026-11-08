@@ -1,0 +1,14 @@
+# Fichiers Python générés
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements et outils locaux
+.venv/
+venv/
+.env
+.pytest_cache/
+
+# Résultats du scan
+/captures/
+/cubestring.txt

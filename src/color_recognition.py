@@ -18,8 +18,8 @@ COLORS = (WHITE, YELLOW, RED, ORANGE, GREEN, BLUE)
 MIN_VALUE = 50         # en dessous : plastique noir ou ombre, couleur inconnue
 MAX_WHITE_SATURATION = 80
 HUE_RANGES = (         # (teinte min incluse, teinte max exclue, couleur)
-    (0, 6, RED),
-    (6, 20, ORANGE),
+    (0, 3, RED),
+    (3, 20, ORANGE),
     (20, 40, YELLOW),
     (40, 88, GREEN),
     (88, 145, BLUE),
@@ -29,7 +29,9 @@ HUE_RANGES = (         # (teinte min incluse, teinte max exclue, couleur)
 # Distance Lab : la luminosité (L) compte moins que la teinte (a, b), car elle
 # varie surtout avec l'éclairage.
 LIGHTNESS_WEIGHT = 0.5
-MAX_REFERENCE_DISTANCE = 60  # au-delà : trop loin de toute référence, inconnue
+MAX_REFERENCE_DISTANCE = 60.0
+REFERENCE_RADIUS_RATIO = 0.75
+MIN_CLASSIFICATION_MARGIN = 5.0
 
 # Couleurs BGR d'affichage et abréviations.
 DISPLAY_BGR = {
@@ -81,13 +83,35 @@ def lab_distance(bgr_a, bgr_b):
     return float(np.linalg.norm(diff))
 
 
+def reference_thresholds(references):
+    """Rayon de reconnaissance par couleur, limité par la référence la plus proche."""
+    thresholds = {}
+    for color, reference in references.items():
+        separations = [lab_distance(reference, other)
+                       for other_color, other in references.items()
+                       if other_color != color]
+        thresholds[color] = (
+            min(MAX_REFERENCE_DISTANCE, REFERENCE_RADIUS_RATIO * min(separations))
+            if separations else MAX_REFERENCE_DISTANCE
+        )
+    return thresholds
+
+
 def classify_with_references(bgr, references):
-    """Couleur de référence la plus proche, ou None si toutes sont trop loin."""
+    """Classe la référence la plus proche seulement si elle est assez distincte."""
     if bgr_to_hsv(bgr)[2] < MIN_VALUE:
         return None
-    distance, color = min((lab_distance(bgr, ref), color)
-                          for color, ref in references.items())
-    return color if distance <= MAX_REFERENCE_DISTANCE else None
+    distances = sorted((lab_distance(bgr, reference), color)
+                       for color, reference in references.items())
+    if not distances:
+        raise ValueError("Au moins une référence de couleur est nécessaire.")
+
+    distance, color = distances[0]
+    if distance > reference_thresholds(references)[color]:
+        return None
+    if len(distances) > 1 and distances[1][0] - distance < MIN_CLASSIFICATION_MARGIN:
+        return None
+    return color
 
 
 def classify_patch(patch, references=None):

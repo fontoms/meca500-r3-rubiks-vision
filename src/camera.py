@@ -5,7 +5,12 @@ import sys
 import cv2
 
 DEFAULT_INDEX = 0
-DEFAULT_BACKEND = cv2.CAP_V4L2 if sys.platform.startswith("linux") else cv2.CAP_ANY
+if sys.platform.startswith("linux"):
+    DEFAULT_BACKEND = cv2.CAP_V4L2
+elif sys.platform == "win32":
+    DEFAULT_BACKEND = cv2.CAP_MSMF
+else:
+    DEFAULT_BACKEND = cv2.CAP_ANY
 # Sous WSL2 (usbipd), le format YUYV par défaut sature le lien USB et provoque
 # des "select() timeout" : le flux MJPG compressé est indispensable.
 DEFAULT_FOURCC = "MJPG"

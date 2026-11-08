@@ -25,7 +25,7 @@ La partie vision par ordinateur est indépendante du futur algorithme de résolu
 - Matplotlib : visualisation et débogage.
 - Pytest : tests automatisés.
 
-La reconnaissance des couleurs reposera principalement sur le traitement d'image et l'espace colorimétrique HSV. Il n'est pas prévu d'utiliser un modèle d'intelligence artificielle pour cette première version.
+La détection ajuste la grille 3×3 à l'orientation de la caméra et écarte les stickers d'une face adjacente avant de redresser la perspective. Sans calibration, la reconnaissance utilise des seuils HSV fixes, avec une séparation rouge/orange adaptée aux teintes orange peu saturées. Avec calibration, elle compare les couleurs dans l'espace Lab et calcule un seuil propre à chaque couleur selon sa distance aux autres références ; les échantillons trop éloignés ou ambigus restent inconnus plutôt que d'être forcés vers une mauvaise couleur. Les références `config/colors.json` sont chargées depuis le dossier du projet, indépendamment du dossier de lancement. Il n'est pas prévu d'utiliser un modèle d'intelligence artificielle pour cette première version.
 
 ---
 

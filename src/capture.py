@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.camera import CameraError
+from .camera import CameraError
 
 DEFAULT_SAVE_DIR = Path("captures")
 WINDOW_NAME = "Rubik's Cube Vision"

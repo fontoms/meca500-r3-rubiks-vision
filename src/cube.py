@@ -21,11 +21,11 @@ from pathlib import Path
 
 import cv2
 
-from src.camera import CameraError
-from src.capture import WINDOW_NAME, CaptureError, capture_frame
-from src.color_recognition import LABELS, UNKNOWN_LABEL, recognize_face
-from src.detection import detect_face
-from src.grid import extract_stickers
+from .camera import CameraError
+from .capture import WINDOW_NAME, CaptureError, capture_frame
+from .color_recognition import LABELS, UNKNOWN_LABEL, recognize_face
+from .detection import detect_face
+from .grid import extract_stickers
 
 FACE_ORDER = "URFDLB"
 SCAN_ORDER = "FRBLUD"   # on tourne autour de l'axe vertical, puis haut et bas
@@ -90,7 +90,13 @@ def to_cubestring(faces):
                 raise CubeError(f"Sticker {face}{index + 1} : couleur {color!r} "
                                 "ne correspond à aucun centre.")
             letters.append(center_to_face[color])
-    return "".join(letters)
+    cubestring = "".join(letters)
+    counts = {face: cubestring.count(face) for face in FACE_ORDER}
+    invalid = ["{}={}".format(face, count) for face, count in counts.items() if count != 9]
+    if invalid:
+        raise CubeError("Répartition des couleurs invalide (9 attendues par face) : "
+                        + ", ".join(invalid))
+    return cubestring
 
 
 def format_net(faces):
